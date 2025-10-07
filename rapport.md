@@ -186,7 +186,7 @@ $$
 
 where:
 
-- \( a = \mathbf{Xw} \) (the linear combination of features and weights).
+- $ a = \mathbf{Xw} $ (the linear combination of features and weights).
 
 The effect of the sigmoid function is to **squash** the unbounded linear score \( a \) into the range \([0,1]\), following an S-shaped curve. This allows us to interpret the output as the probability of the instance belonging to the positive class.
 
@@ -330,4 +330,122 @@ When testing our multiple different hyperparameter like the learning rate and th
 
 The 
 
-## Softmax : TODO
+## Softmax classifier / Multi class logistic regression
+
+### Implementation of the Scores
+
+<sub>I know this part really sounds like it got written entierely by ChatGPT, but I did really go through the trouble of planning out the dimensions of every thing myself first, and figuring out the per instance and per class prediction. ChatGPT just rewrote those info into pretty $W \in \mathbb{R}^{(\text{dim}, K)}$ notations. </sub>
+
+
+As an extension of logistic regression, the softmax classifier follows a very similar structure to its binary predecessor.
+
+We start by taking the dot product between an input instance and the model’s weight parameters. In binary logistic regression, the **sigmoid function** is used to squash the resulting score into a probability between 0 and 1. In the multiclass setting, we instead use the **softmax function**, which performs a similar transformation but ensures that *all* class probabilities are represented and that they sum to 1.
+
+A key structural difference lies in the **weight matrix**.  
+Instead of a single weight vector, the softmax classifier maintains a weight matrix of shape  : 
+
+$$
+W \in \mathbb{R}^{(\text{dim}, K)},
+$$
+
+where $K$ is the number of classes.  
+This means that the output of the dot product for a single instance $x_i$ is:
+
+$$
+(1, \text{dim}) \cdot (\text{dim}, K) = (1, K).
+$$
+
+#### Score Function
+
+The scores for one instance are defined as:
+
+$$
+\text{score}_i = \text{softmax}(z_i)
+$$
+
+where:
+
+$$
+z_i = x_i W
+$$
+
+and the softmax function is:
+
+$$
+\text{softmax}(z_i)_k = \frac{e^{z_{ik}}}{\sum_{j=1}^{K} e^{z_{ij}}}.
+$$
+
+#### Per-Class and Per-Instance Forms
+
+For a specific class \(k\):
+
+$$
+z_{ik} = x_i w_k,
+$$
+
+where:
+- $x_i \in \mathbb{R}^{(1, \text{dim})}$ is the input instance (a row vector),
+- $w_k \in \mathbb{R}^{(\text{dim}, 1)}$ is the weight column corresponding to class \(k\).
+
+Thus, $z_{ik}$ is a scalar — the score of instance $i$ for class $k$
+
+To compute the scores for all classes at once:
+
+$$
+z_i = x_i W
+$$
+
+where:
+- $x_i \in \mathbb{R}^{(1, \text{dim})}$
+- $W \in \mathbb{R}^{(\text{dim}, K)}$
+- $z_i \in \mathbb{R}^{(1, K)}$ is the vector of scores across all classes.
+
+Finally, the predicted probability for class $k$ given instance $x_i$ is:
+
+$$
+\hat{y}_{ik} = \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}.
+$$
+
+### Implementation of the loss function : TODO
+
+The process to get the loss function for a softmax classifier is once again very similar to the Logistic Regression (and really most probabilistic models). We are going to use the negative log likelihood to define a cost function for our model. 
+
+Firstly, the Softmax classifier is based on the **Categorical distribution**, which is an extension of the Bernoulli distribution for multiple classes instead of a binary classification. It's defined as : 
+
+$$
+p(x=i) = p_i
+$$
+
+It is, at face value, pretty simple, and that's partially because it is. It tells that the probability of instance $x$ being of class $i$ is equal to $p_i$, which is pretty straightforward. Just like with any PMF, summing over all $i$ will give 1, and each of those $p_i \in {0,1}$. 
+
+We also know that the softmax function we saw earlier can be used to produce the same result. Thus : 
+
+$$
+p(x=k) = p_k = \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}.
+$$
+
+With this defined, we can now take the likelihood of the PMF and replace the $p_i$ by the softmax function, like so : 
+
+$$
+L(W) = \prod_{i=1}^K p_k = \prod_{i=1}^K \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}
+$$
+
+We can then move on to taking the negative log likelihood of this function to define the classical cost function used often. 
+
+$$
+\begin{array}{rcl}
+NLL(W) & = &-  \ln(\prod_{i=1}^K \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}) \\ 
+& = & - \sum_{i=1}^K \ln(\frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}) \\
+& = & - \sum_{i=1}^K (\ln{e^{x_i w_k}} - \ln{(\sum_{j=1}^{K} e^{x_i w_j})})\\
+& = & - \sum_{i=1}^K (\mathbf{x_i w_c} - \ln{(\sum_{j=1}^{K} e^{\mathbf{x_i w_j}})})
+\end{array}
+$$
+
+where : 
+- $\mathbf{x_i w_c}$ represent the logit score (before being put through the softmax function) for the *correct* class. 
+
+
+
+### Implementation of the gradient and weight update : TODO
+
+### Fine tuning : TODO
