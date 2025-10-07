@@ -188,11 +188,11 @@ where:
 
 - $ a = \mathbf{Xw} $ (the linear combination of features and weights).
 
-The effect of the sigmoid function is to **squash** the unbounded linear score \( a \) into the range \([0,1]\), following an S-shaped curve. This allows us to interpret the output as the probability of the instance belonging to the positive class.
+The effect of the sigmoid function is to **squash** the unbounded linear score $ a $ into the range $[0,1]$, following an S-shaped curve. This allows us to interpret the output as the probability of the instance belonging to the positive class.
 
-- For very negative values of \( a = \mathbf{x}^T \mathbf{w} \), the sigmoid output approaches 0.  
-- For very positive values of \( a \), the output approaches 1.  
-- For values of \( a \) near 0, the sigmoid outputs values close to 0.5, indicating high uncertainty in the classification.  
+- For very negative values of $ a = \mathbf{x}^T \mathbf{w} $, the sigmoid output approaches 0.  
+- For very positive values of $ a $, the output approaches 1.  
+- For values of $ a $ near 0, the sigmoid outputs values close to 0.5, indicating high uncertainty in the classification.  
 
 This contrasts with the Perceptron’s sign function, which always outputs a strict 0 or 1 and cannot express uncertainty. Logistic Regression therefore provides a **probabilistic prediction** rather than a hard decision, making it more flexible and informative.
 
@@ -377,7 +377,7 @@ $$
 
 #### Per-Class and Per-Instance Forms
 
-For a specific class \(k\):
+For a specific class $k$:
 
 $$
 z_{ik} = x_i w_k,
@@ -385,7 +385,7 @@ $$
 
 where:
 - $x_i \in \mathbb{R}^{(1, \text{dim})}$ is the input instance (a row vector),
-- $w_k \in \mathbb{R}^{(\text{dim}, 1)}$ is the weight column corresponding to class \(k\).
+- $w_k \in \mathbb{R}^{(\text{dim}, 1)}$ is the weight column corresponding to class $k$.
 
 Thus, $z_{ik}$ is a scalar — the score of instance $i$ for class $k$
 
@@ -406,44 +406,124 @@ $$
 \hat{y}_{ik} = \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}.
 $$
 
-### Implementation of the loss function : TODO
+### Implementation of the Loss Function
 
-The process to get the loss function for a softmax classifier is once again very similar to the Logistic Regression (and really most probabilistic models). We are going to use the negative log likelihood to define a cost function for our model. 
+The process to obtain the loss function for a Softmax classifier is conceptually very similar to that used for Logistic Regression (and, more broadly, for many probabilistic models).  
+We start by defining the **Negative Log-Likelihood (NLL)** of the model, which we will use as our cost function.
 
-Firstly, the Softmax classifier is based on the **Categorical distribution**, which is an extension of the Bernoulli distribution for multiple classes instead of a binary classification. It's defined as : 
+#### 1. The Categorical Distribution
 
-$$
-p(x=i) = p_i
-$$
-
-It is, at face value, pretty simple, and that's partially because it is. It tells that the probability of instance $x$ being of class $i$ is equal to $p_i$, which is pretty straightforward. Just like with any PMF, summing over all $i$ will give 1, and each of those $p_i \in {0,1}$. 
-
-We also know that the softmax function we saw earlier can be used to produce the same result. Thus : 
+The Softmax classifier is based on the **Categorical distribution**, which extends the Bernoulli distribution to multiple classes instead of a binary setup.  
+It is defined as:
 
 $$
-p(x=k) = p_k = \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}.
+P(y = i) = p_i
 $$
 
-With this defined, we can now take the likelihood of the PMF and replace the $p_i$ by the softmax function, like so : 
+This simply means that the probability of an instance $x$ belonging to class $i$ is $p_i$.  
+All probabilities must satisfy:
 
 $$
-L(W) = \prod_{i=1}^K p_k = \prod_{i=1}^K \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}
+\sum_{i=1}^{K} p_i = 1, \quad 0 \le p_i \le 1
 $$
 
-We can then move on to taking the negative log likelihood of this function to define the classical cost function used often. 
+---
+
+#### 2. The Softmax Function
+
+The **Softmax** function converts raw scores (logits) into such a valid probability distribution:
+
+$$
+p(y = k \mid x; W) = p_k = \frac{e^{x_i^\top w_k}}{\sum_{j=1}^{K} e^{x_i^\top w_j}}
+$$
+
+where:
+- $x_i$ is the feature vector of the $i$-th sample,  
+- $w_k$ is the weight vector for class $k$,  
+- and $K$ is the total number of classes.
+
+
+
+#### 3. Likelihood of the Dataset
+
+Assuming independence between samples, the likelihood of observing the entire dataset is:
+
+$$
+L(W) = \prod_{i=1}^{N} P(y_i \mid x_i, W)
+     = \prod_{i=1}^{N} \frac{e^{x_i^\top w_{c_i}}}{\sum_{j=1}^{K} e^{x_i^\top w_j}}
+$$
+
+where $c_i$ denotes the correct class for sample $i$.
+
+#### 4. Negative Log-Likelihood (Cost Function)
+
+Taking the negative logarithm gives the **Negative Log-Likelihood (NLL)**:
 
 $$
 \begin{array}{rcl}
-NLL(W) & = &-  \ln(\prod_{i=1}^K \frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}) \\ 
-& = & - \sum_{i=1}^K \ln(\frac{e^{x_i w_k}}{\sum_{j=1}^{K} e^{x_i w_j}}) \\
-& = & - \sum_{i=1}^K (\ln{e^{x_i w_k}} - \ln{(\sum_{j=1}^{K} e^{x_i w_j})})\\
-& = & - \sum_{i=1}^K (\mathbf{x_i w_c} - \ln{(\sum_{j=1}^{K} e^{\mathbf{x_i w_j}})})
+NLL(W) & = & - \ln L(W) \\[6pt]
+& = & - \sum_{i=1}^{N} \ln \left( \frac{e^{x_i^\top w_{c_i}}}{\sum_{j=1}^{K} e^{x_i^\top w_j}} \right) \\[6pt]
+& = & - \sum_{i=1}^{N} \left( x_i^\top w_{c_i} - \ln \left( \sum_{j=1}^{K} e^{x_i^\top w_j} \right) \right)
 \end{array}
 $$
 
-where : 
-- $\mathbf{x_i w_c}$ represent the logit score (before being put through the softmax function) for the *correct* class. 
+Here:
+- $x_i^\top w_{c_i}$ is the **logit score** (before the softmax) for the correct class.  
+- The second term, $\ln(\sum_j e^{x_i^\top w_j})$, accounts for the scores of *all* classes and ensures normalization.
 
+#### 5. Matrix Form Implementation
+
+In matrix form, we define:
+
+$$
+\mathbf{Z} = \mathbf{XW}
+$$
+
+where:
+- $\mathbf{X} \in \mathbb{R}^{N \times D}$ is the design matrix (inputs),
+- $\mathbf{W} \in \mathbb{R}^{D \times K}$ contains the class weights,
+- $\mathbf{Z} \in \mathbb{R}^{N \times K}$ contains all class scores (logits).
+
+To select the correct logit for each observation, we use the **one-hot encoded** label matrix $\mathbf{Y}$,  
+where each row corresponds to a sample and has a 1 in the column of the true class:
+
+$$
+Y_{ik} =
+\begin{cases}
+1 & \text{if sample } i \text{ belongs to class } k, \\
+0 & \text{otherwise.}
+\end{cases}
+$$
+
+This allows us to extract all correct logits at once as:
+
+$$
+z_{\text{correct}} = \sum_{k=1}^{K} Y_{ik} Z_{ik} = (\mathbf{Y} * \mathbf{Z}) \text{ summed over axis } k.
+$$
+
+Thus, the NLL in matrix form becomes:
+
+$$
+NLL(W) = - \frac{1}{N} \sum_{i=1}^{N} 
+\left( z_{\text{correct}, i} - 
+\ln \left( \sum_{k=1}^{K} e^{Z_{ik}} \right) \right)
+$$
+
+This is the cost function implemented in code, and minimizing it with respect to $W$ corresponds to **maximizing the log-likelihood** of the categorical model. 
+
+#### Loss function with L2 regularization
+
+Adding L2 regularization remains straight forward. If 
+
+$$
+NLL(W) = - \sum_{i=1}^{N} \left( x_i^\top w_{c_i} - \ln \left( \sum_{j=1}^{K} e^{x_i^\top w_j} \right) \right)
+$$
+
+Then the negative log likelihood with L2 regularization is simply : 
+
+$$
+NLL_{\text{l2}}(W) = NLL(W) + \frac{\lambda}{2}||W||_2^2
+$$
 
 
 ### Implementation of the gradient and weight update : TODO
