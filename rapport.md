@@ -261,33 +261,134 @@ Where :
 
 This is the base cost function with regularization. Depending on the sources consulted, some recommend to divide the L2 part by $\frac{1}{2}$ or by $\frac{1}{2N}$, which allows for an easier derivation of the gradient. Other also recommend to not include the intercept term ($w_0$) in the L2 regularization, as it is not a standard weight and simply shift the general result up or down. Various professional libraries (sci-kit learn, tensorflow, pytorch, etc...) sometimes vary on this aspect. 
 
-### Implementation of the gradient function : TODO
+### Implementation of the Gradient Function
 
-With the cost function defined above, we can now take the derivative to guide our optimization process. 
+With the cost function defined above, we can now take its derivative with respect to the weights to guide our optimization process.  
+Recall that the binary logistic regression cost (negative log-likelihood) is defined as:
 
 $$
-E(\mathbf{w}) = - \frac{1}{N}[\mathbf{y^T} \ln(\hat{\mathbf{y}}) - (\mathbf{1-y})^T \ln(\mathbf{1}- \hat{\mathbf{y}})]
+E(\mathbf{w}) = - \frac{1}{N}\left[\mathbf{y}^T \ln(\hat{\mathbf{y}}) + (\mathbf{1 - y})^T \ln(\mathbf{1} - \hat{\mathbf{y}})\right]
 $$
 
-Before doing the full derivation, let's already find the derivation of the core sigmoid function : 
+To work out this derivative, we’ll use the **chain rule**, which allows us to break this large expression into smaller, simpler parts that are easier to differentiate.  
+We define the intermediate functions as follows:
+
+- \(h(\mathbf{w}) = \mathbf{Xw} = \mathbf{z}\)
+- \(g(\mathbf{z}) = \sigma(\mathbf{z}) = \frac{1}{1 + e^{-\mathbf{z}}} = \hat{\mathbf{y}}\)
+- \(f(\hat{\mathbf{y}}) = E(\mathbf{w}) = - \frac{1}{N}\left[\mathbf{y}^T \ln(\hat{\mathbf{y}}) + (\mathbf{1 - y})^T \ln(\mathbf{1} - \hat{\mathbf{y}})\right]\)
+
+Applying the chain rule gives:
+
+$$
+\nabla_{\mathbf{w}} E(\mathbf{w}) = \frac{df}{d\hat{\mathbf{y}}} \cdot \frac{dg}{d\mathbf{z}} \cdot \frac{dh}{d\mathbf{w}}
+$$
+
+Let’s now derive each term individually.
+
+---
+
+#### Step 1: Derivative of \(h(\mathbf{w}) = \mathbf{Xw}\)
+
+This first part is straightforward:
+
+$$
+\frac{dh}{d\mathbf{w}} = \mathbf{X}
+$$
+
+---
+
+#### Step 2: Derivative of \(g(\mathbf{z}) = \sigma(\mathbf{z}) = (1 + e^{-\mathbf{z}})^{-1}\)
+
+We differentiate with respect to \(\mathbf{z}\):
+
+$$
+\frac{dg}{d\mathbf{z}} = \frac{d}{d\mathbf{z}}(1 + e^{-\mathbf{z}})^{-1}
+$$
+
+We can apply the chain rule again here by defining:
+- \(r(\mathbf{z}) = 1 + e^{-\mathbf{z}}\)
+- \(t(u) = u^{-1}\)
+
+Then:
+
+$$
+\frac{dg}{d\mathbf{z}} = t'(r(\mathbf{z})) \cdot r'(\mathbf{z})
+$$
+
+Compute each derivative:
+
+$$
+t'(u) = -u^{-2} = -(1 + e^{-\mathbf{z}})^{-2}, \qquad r'(\mathbf{z}) = -e^{-\mathbf{z}}
+$$
+
+Combining:
+
+$$
+\frac{dg}{d\mathbf{z}} = (-(1 + e^{-\mathbf{z}})^{-2})(-e^{-\mathbf{z}}) = \frac{e^{-\mathbf{z}}}{(1 + e^{-\mathbf{z}})^2}
+$$
+
+We can rewrite this in a more compact and interpretable form using \(\sigma(\mathbf{z})\):
+
+$$
+\frac{dg}{d\mathbf{z}} = \sigma(\mathbf{z})(1 - \sigma(\mathbf{z}))
+$$
+
+As **the derivative of the sigmoid function**, this is one of the most important identities in logistic regression.
+
+---
+
+#### Step 3: Derivative of \(f(\hat{\mathbf{y}})\)
+
+Now, for the derivative of the loss with respect to the predicted probabilities \(\hat{\mathbf{y}}\):
+
+$$
+\frac{df}{d\hat{\mathbf{y}}} 
+= -\left( \frac{\mathbf{y}}{\hat{\mathbf{y}}} - \frac{1 - \mathbf{y}}{1 - \hat{\mathbf{y}}} \right)
+$$
+
+This comes directly from the logarithmic derivative rule 
+\(\frac{d}{dx} \ln(x) = \frac{1}{x}\), applied to each term in the cost.
+
+---
+
+#### Step 4: Putting it all together
+
+Now, combine all three derivatives according to the chain rule:
 
 $$
 \begin{array}{rcl}
-\sigma(x) &  = &  \frac{1}{1+e^{-x}} \\
-\nabla_x \sigma(x) & = & \frac{d(\sigma(x))}{x}\\
- & = & \frac{1}{1+e^{-x}} \cdot (1 - \frac{1}{1+e^{-x}}) \\
- & = & \sigma(x)(1-\sigma(x))
+\nabla_{\mathbf{w}} E(\mathbf{w}) 
+&=& \frac{df}{d\hat{\mathbf{y}}} \cdot \frac{dg}{d\mathbf{z}} \cdot \frac{dh}{d\mathbf{w}} \\[8pt]
+&=& \underbrace{-\left( \frac{\mathbf{y}}{\hat{\mathbf{y}}} - \frac{1 - \mathbf{y}}{1 - \hat{\mathbf{y}}} \right)}_{\frac{df}{d\hat{\mathbf{y}}}}
+\underbrace{\hat{\mathbf{y}}(1 - \hat{\mathbf{y}})}_{\frac{dg}{d\mathbf{z}}}
+\underbrace{\mathbf{X}}_{\frac{dh}{d\mathbf{w}}}
 \end{array}
 $$
 
-Using the chain rule we can start working on the main derivation. 
+Simplifying:
 
 $$
-\begin{array}{rcl}
-\nabla_{\mathbf{w}} E(\mathbf{w}) & = & \frac{d(E(w))}{d(w)} \\
-& = & \frac{1}{N}\mathbf{X^T}(\sigma_w(\mathbf{X}) - \mathbf{y})
-\end{array}
+\nabla_{\mathbf{w}} E(\mathbf{w}) 
+= -\mathbf{X}^T [(\mathbf{y} - \hat{\mathbf{y}})]
 $$
+
+or equivalently (reversing the sign to match gradient descent convention):
+
+$$
+\nabla_{\mathbf{w}} E(\mathbf{w}) = \mathbf{X}^T (\hat{\mathbf{y}} - \mathbf{y})
+$$
+
+Finally, reintroducing the normalization over \(N\) samples:
+
+$$
+\nabla_{\mathbf{w}} E(\mathbf{w}) = \frac{1}{N} \mathbf{X}^T (\hat{\mathbf{y}} - \mathbf{y})
+$$
+
+---
+
+This final expression is the gradient of the logistic regression loss.  
+It tells us that, on average, the weights should be updated proportionally to the difference between the predicted probabilities and the true labels, scaled by the input features \(\mathbf{X}\).
+
 
 
 
@@ -328,7 +429,11 @@ $$
 
 When testing our multiple different hyperparameter like the learning rate and the strength of the regulation, a few different thing arise that are rather odd. 
 
-The 
+Firstly, a lot of combination of parameters end up with surprisingly the exact same accuracy values. For example, a learning rate of $1e-06$ and any of 0.0001, 0.01 or 0 regulation end up with the same accuracy (0.651 the last time I ran the code). This hint that, no matter the combination, the model end up in the exact same minima it find, and the hyperparameters do not manage to change the result. 
+
+The second thing that comes to mind is finding of the best regulation strength, which is 10'000. Most of the time, we're used to hyperparameters being rather small, seeing how the learning rate is in the range 0.0000001-0.000000001 for example. Yet, here, the best regulation strength is not just well above 0, but outright 10K ! Such a regulation strength means the model seem to perform the best when weights are *extremely* small. 
+
+At lower learning rate ($1e-07, 1e-08$), we see that the model barely learn anything comparated to the $1e-06$ learning rate. All validation accuracy remain in the zone of ~0.42, with little to no impact from the regulation strength. This seem to hint that a learning rate this small is unable to escape the initial zone of initialization of its weights, and the model is unable to take steps to avoid this trap. 
 
 ## Softmax classifier / Multi class logistic regression
 
