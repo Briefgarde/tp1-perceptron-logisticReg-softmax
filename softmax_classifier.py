@@ -70,7 +70,7 @@ class Softmax(Classifier):
         # TODO: Compute the gradients and store the gradients in dW.                #
         # Don't forget the regularization!                                          #
         #############################################################################     
-        dW = X.T @ (scores - y_OHE) / num_train   
+        dW = X.T @ (scores - y_OHE) / num_train   + reg*self.W 
 
         #############################################################################
         #                          END OF YOUR CODE                                 #
